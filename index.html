@@ -105,12 +105,13 @@ fieldset{border:0;padding:0;margin:0;min-width:0}
 /* 포스터·숏폼: 폰에서는 옆으로 넘기기 */
 .pgrid,.vgrid{display:flex;gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;padding:6px 4px 18px;margin:0 -4px;-webkit-overflow-scrolling:touch}
 .pcard{flex:0 0 min(74vw,300px);scroll-snap-align:center;display:flex;flex-direction:column;gap:10px;padding:0;border:0;background:none;text-align:left;cursor:pointer}
-.pmedia{display:grid;place-items:center;aspect-ratio:3/4;background:#fff;border-radius:24px;box-shadow:var(--shadow);overflow:hidden;transition:transform .15s}
+.pmedia{display:grid;place-items:center;aspect-ratio:1000/1414;background:#fff;border-radius:24px;box-shadow:var(--shadow);overflow:hidden;transition:transform .15s}
 .pcard:active .pmedia{transform:scale(.98)}
 .pmedia img{width:100%;height:100%;object-fit:cover;display:block}
 .pmeta{display:flex;flex-direction:column;padding-inline:6px}
 .pmeta strong{font-size:1.05rem}
-.counts{font-size:.85rem;color:var(--muted)}
+.pdesc{font-size:.92rem;font-weight:500;line-height:1.45;margin-top:4px;word-break:keep-all}
+.counts{font-size:.85rem;color:var(--muted);margin-top:4px}
 .ph{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;width:100%;height:100%;padding:16px;text-align:center;color:var(--muted);background:repeating-linear-gradient(135deg,#fff,#fff 14px,#f6f8ff 14px,#f6f8ff 28px)}
 .ph b{font:400 1.5rem/1.2 var(--head);color:var(--ink)}
 .vcard{flex:0 0 min(66vw,270px);scroll-snap-align:center;display:flex;flex-direction:column;gap:10px;min-width:0}
@@ -423,7 +424,7 @@ function derive(){
   });
   media={};
   Object.keys(meta).forEach(function(id){
-    var m=meta[id],o={title:m['제목']||'',author:m['만든이']||'',up:String(m['업로드']||''),src:''};
+    var m=meta[id],o={title:m['제목']||'',author:m['만든이']||'',up:String(m['업로드']||''),src:'',desc:m['설명']||''};
     if(m['구분']==='영상')o.src=m['주소']||'';
     else{var c=chunks[id+'|'+m['업로드']],n=parseInt(m['개수'],10)||0,ok=!!c&&n>0;
       for(var q=0;ok&&q<n;q++)if(!c[q])ok=false;
@@ -590,7 +591,8 @@ function syncCards(grid,items,cache,build,update,keyOf2){
   if(!same)grid.replaceChildren.apply(grid,nodes);
 }
 function ph(kind,title){return h('div',{class:'ph'},h('b',{text:title}),h('span',{text:kind==='v'?'영상이 곧 올라와요':'포스터가 곧 올라와요'}));}
-function slot(id){var m=media[id]||{};return {id:id,title:m.title||((id.charAt(0)==='p'?'포스터 ':'숏폼 ')+id.slice(1)),author:m.author||'CODI 동아리',src:m.src||'',up:m.up||''};}
+var DESC={p1:'정보를 확인할 때는 항상 출처가 믿을만한지 확인해요.',p2:'자극적인 제목의 글과 영상은 무조건 믿지 말아야 해요.',p3:'빠르게 퍼지는 소문, 거짓 소문일 수도 있어요!'};
+function slot(id){var m=media[id]||{};return {id:id,desc:m.desc||DESC[id]||'',title:m.title||((id.charAt(0)==='p'?'포스터 ':'숏폼 ')+id.slice(1)),author:m.author||'CODI 동아리',src:m.src||'',up:m.up||''};}
 var POSTERS=['p1','p2','p3'],VIDEOS=['v1','v2','v3'];
 
 /* ---------- 포스터 ---------- */
@@ -605,14 +607,15 @@ var pcache={},openId=null,opener=null,lastDetail='';
 function renderPosters(){
   syncCards($('#poster-grid'),POSTERS.map(slot),pcache,function(p){
     var counts=h('span',{class:'counts'});
+    var desc=h('span',{class:'pdesc',text:p.desc});
     var root=h('button',{class:'pcard',type:'button',onclick:function(e){openPoster(p.id,e.currentTarget)}},
       h('span',{class:'pmedia'},posterMedia(p)),
-      h('span',{class:'pmeta'},h('strong',{text:p.title}),h('span',{class:'muted',text:p.author}),counts));
+      h('span',{class:'pmeta'},h('strong',{text:p.title}),h('span',{class:'muted',text:p.author}),desc,counts));
     return {root:root,counts:counts};
   },function(n,p){
     var nc=D.comments.filter(function(c){return c['대상']===p.id}).length;
     n.counts.textContent='댓글 '+nc+' · 눌러서 보기';
-  },function(p){return p.title+'|'+p.author+'|'+p.up});
+  },function(p){return p.title+'|'+p.author+'|'+p.up+'|'+p.desc});
   if(openId)renderPosterDetail();
 }
 function openPoster(id,el){
@@ -628,7 +631,7 @@ function closeOv(){
 function renderPosterDetail(){
   var p=slot(openId);var key=p.id+'|'+p.up;
   if(lastDetail!==key){$('#ov-media').replaceChildren(posterMedia(p));lastDetail=key;}
-  $('#ov-title').textContent=p.title;$('#ov-author').textContent=p.author;
+  $('#ov-title').textContent=p.title;$('#ov-author').textContent=p.desc||p.author;
   $('#c-who').textContent=(me&&me.g)?'닉네임 '+meLabel()+'(으)로 남겨요':'';
   var list=$('#ov-list'),cs=D.comments.filter(function(c){return c['대상']===p.id}).sort(function(a,b2){return b2.row-a.row});
   list.replaceChildren.apply(list,cs.length?cs.map(function(c){
